@@ -6,7 +6,7 @@
 
 #include <math.h>
 
-#define MAX_RANGE 7
+#define MAX_RANGE 10
 
 #define LEFT_ANG 90
 #define RIGHT_ANG 270
@@ -21,9 +21,15 @@ int SIDE_DEG = 58; //(int)(RAD2DEG*atan(1.2/0.75)); = 57.99
 
 #define PRESENT_PAST_RATIO 0.6
 
-#define MAX_LINEAR_VEL 1.5
+#define MAX_LINEAR_VEL 2.0
 
 #define Robot_Width 0.55
+
+#define LOOP_RATE 30
+
+#define PARKING_AREA_TIME 3
+
+#define PARKING_AREA_TRIAGNLE (0.6)*(1.2)*0.5
 
 
 /*********************
@@ -40,6 +46,18 @@ float linear_x=0;
 float angular_z=0;
 
 float Kp = 15;
+float phase2_Kp = 0.005;
+float phase2_Kp_angular = 10.0;
+
+float sum_all_scan = 0;
+float stop_threshold = 70;
+
+int wait =0;
+int wait_threshold = (float)PARKING_AREA_TIME/((float)1.0/(float)LOOP_RATE);
+
+int phase2_count = 0;
+int phase4_count =0;
+int phase5_count=0;
 
 void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
   int i=0;
@@ -63,7 +81,7 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
   left_triangle *= (0.5*DEG2RAD);
   right_triangle *=(0.5*DEG2RAD);
 
-  ROS_INFO("left_triangle : %f, right_triangle : %f",left_triangle,right_triangle);
+  //ROS_INFO("left_triangle : %f, right_triangle : %f",left_triangle,right_triangle);
 
  // float triangle_error = left_triangle-right_triangle;
   float triangle_error = TRIANGLE-right_triangle;
@@ -77,29 +95,123 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     }
 */
     if((laserscan_arr[0]+laserscan_arr[1]+laserscan_arr[2])/3 > 1.2){
-      static int phase2_count = 0;
       phase2_count ++;
       if(phase2_count >=5){
         phase++;
       }
     }
     linear_x =  Kp*0.02*((1.2*1.2) - left_square); //+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
-    angular_z = PRESENT_PAST_RATIO * triangle_error * Kp + pre_linear_x * (1 - PRESENT_PAST_RATIO);
+    angular_z = PRESENT_PAST_RATIO * triangle_error * Kp + pre_angular_z * (1 - PRESENT_PAST_RATIO);
   }
   if(phase == 1){
+
+    if(left_triangle < TRIANGLE){
+      phase ++;
+    }
 
     float r_vel,l_vel;
     l_vel = 0.4;
     r_vel = l_vel * ((((1.5 - Robot_Width)*0.5)+Robot_Width)/((1.5-Robot_Width)*0.5));
-    float ease_curve = 0.1;
+    float ease_curve = 0.07;
 
-    ROS_INFO("r_vel = %f",r_vel);
+    //ROS_INFO("r_vel = %f",r_vel);
     float ang_vel = (r_vel-l_vel)/Robot_Width - ease_curve;
     float lin_vel = (r_vel+l_vel)/2;
 
     linear_x = lin_vel;
     angular_z = ang_vel;
   }
+  if(phase == 2){
+    ROS_INFO("phase 2");
+    for(i=0;i<180;i++){
+      sum_all_scan += laserscan_arr[i];
+    }
+    //ROS_INFO("sum_all_scan : %f",sum_all_scan);
+    if(sum_all_scan < stop_threshold){
+      phase++;
+    }
+
+    float triangle_error_rl = left_triangle-right_triangle;
+    linear_x = phase2_Kp * sum_all_scan;
+    angular_z = phase2_Kp_angular * triangle_error_rl;
+
+    sum_all_scan = 0.0;
+
+  }
+  if(phase == 3){
+    ROS_INFO("phase3");
+    linear_x = 0.0;
+    angular_z = 0.0;
+    if((wait++) > wait_threshold){
+      phase ++;
+    }
+
+  }
+  if(phase == 4){
+    //ROS_INFO("wait_theashold : %d",wait_threshold);
+    ROS_INFO("phase 4");
+/*
+    if(left_triangle > PARKING_AREA_TRIAGNLE){
+      phase ++;
+    }
+    */
+
+/*
+    for(i=0;i<180;i++){
+      sum_all_scan += laserscan_arr[i];
+    }
+*/
+    //ROS_INFO("sum_all_scan : %f",sum_all_scan);
+
+    float triangle_error_rl = left_triangle-right_triangle;
+    linear_x = -0.5;
+    angular_z = -1 * phase2_Kp_angular * triangle_error_rl;
+
+    sum_all_scan = 0.0;
+
+    /*if(left_triangle > PARKING_AREA_TRIAGNLE){
+      phase ++;
+    }*/
+    if(laserscan_arr[90]>0.8){
+      phase4_count++;
+      if(phase4_count>5){
+        phase++;
+      }
+    }
+  }
+  if(phase == 5){
+
+    ROS_INFO("phase 5");
+
+    float r_vel,l_vel;
+    l_vel = -0.4;
+    r_vel = l_vel * ((((1.5 - Robot_Width)*0.5)+Robot_Width)/((1.5-Robot_Width)*0.5));
+    float ease_curve = 0.02;
+
+    //ROS_INFO("r_vel = %f",r_vel);
+    float ang_vel = (r_vel-l_vel)/Robot_Width - ease_curve;
+    float lin_vel = (r_vel+l_vel)/2;
+
+    linear_x = lin_vel;
+    angular_z = ang_vel;
+
+    //ang_vel *=-1;
+    //lin_vel *=-1;
+
+    if(laserscan_arr[90]>(MAX_RANGE-2)){
+      phase5_count++;
+      ROS_WARN("isinf");
+      if(phase5_count >= 5){
+        phase++;
+      }
+    }
+  }
+  if(phase == 6){
+    ROS_INFO("phase6");
+    linear_x =  1.0;//+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
+    angular_z = PRESENT_PAST_RATIO * triangle_error * Kp*0.01 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
+  }
+
 }
 
 int main(int argc, char **argv)
@@ -110,10 +222,10 @@ int main(int argc, char **argv)
   ros::Publisher cmdvel_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
   ros::Subscriber cmd_vel_sub = nh.subscribe("/scan", 1000, scan_Callback);
 
-  ros::Rate loop_rate(30);
+  ros::Rate loop_rate(LOOP_RATE);
   while (ros::ok())
   {
-    ROS_INFO("%d",SIDE_DEG);
+    //ROS_INFO("%d",SIDE_DEG);
     geometry_msgs::Twist msg;
     msg.linear.x = linear_x;
     msg.angular.z = angular_z;
