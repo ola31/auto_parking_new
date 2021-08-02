@@ -68,7 +68,7 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     if(isinf(msg->ranges[i+LEFT_ANG])){
       laserscan_arr[i] = MAX_RANGE;
     }
-    laserscan_arr[i] = msg->ranges[i+LEFT_ANG];
+    else laserscan_arr[i] = msg->ranges[i+LEFT_ANG];
   }
 
   for(i=0;i<SIDE_DEG;i++){
@@ -172,7 +172,7 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     /*if(left_triangle > PARKING_AREA_TRIAGNLE){
       phase ++;
     }*/
-    if(laserscan_arr[90]>0.8){
+    if(laserscan_arr[90]>0.7){
       phase4_count++;
       if(phase4_count>5){
         phase++;
@@ -186,7 +186,7 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     float r_vel,l_vel;
     l_vel = -0.4;
     r_vel = l_vel * ((((1.5 - Robot_Width)*0.5)+Robot_Width)/((1.5-Robot_Width)*0.5));
-    float ease_curve = 0.02;
+    float ease_curve = 0.08;
 
     //ROS_INFO("r_vel = %f",r_vel);
     float ang_vel = (r_vel-l_vel)/Robot_Width - ease_curve;
@@ -198,18 +198,56 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     //ang_vel *=-1;
     //lin_vel *=-1;
 
-    if(laserscan_arr[90]>(MAX_RANGE-2)){
-      phase5_count++;
-      ROS_WARN("isinf");
-      if(phase5_count >= 5){
-        phase++;
-      }
+    if(laserscan_arr[81]>(MAX_RANGE-2) ||
+       laserscan_arr[82]>(MAX_RANGE-2) ||
+       laserscan_arr[83]>(MAX_RANGE-2) ||
+       laserscan_arr[84]>(MAX_RANGE-2) ||
+       laserscan_arr[85]>(MAX_RANGE-2) ||
+       laserscan_arr[86]>(MAX_RANGE-2) ||
+       laserscan_arr[88]>(MAX_RANGE-2) ||
+       laserscan_arr[89]>(MAX_RANGE-2) ||
+       laserscan_arr[90]>(MAX_RANGE-2) ||
+       laserscan_arr[91]>(MAX_RANGE-2) ||
+       laserscan_arr[92]>(MAX_RANGE-2) ||
+       laserscan_arr[93]>(MAX_RANGE-2) ||
+       laserscan_arr[94]>(MAX_RANGE-2) ||
+       laserscan_arr[95]>(MAX_RANGE-2) ||
+       laserscan_arr[96]>(MAX_RANGE-2) ||
+       laserscan_arr[97]>(MAX_RANGE-2) ||
+       laserscan_arr[98]>(MAX_RANGE-2) ||
+       laserscan_arr[99]>(MAX_RANGE-2)
+       ){
+        phase5_count++;
+        ROS_WARN("isinf");
+        if(phase5_count >= 5){
+          phase++;
+        }
     }
   }
   if(phase == 6){
     ROS_INFO("phase6");
+    float right_error = 0.6 - laserscan_arr[179];
     linear_x =  1.0;//+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
-    angular_z = PRESENT_PAST_RATIO * triangle_error * Kp*0.01 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
+    angular_z = PRESENT_PAST_RATIO * right_error * Kp + pre_angular_z * (1 - PRESENT_PAST_RATIO);
+    int i=0;
+    for(i=0;i<180;i++){
+      printf("%f",laserscan_arr[i]);
+    }
+    ROS_INFO("============================");
+    if(laserscan_arr[170]>(MAX_RANGE-2)){
+      phase++;
+    }
+    if(laserscan_arr[150]>(MAX_RANGE-2)){
+      linear_x = 0.5;
+    }
+    if(laserscan_arr[160]>(MAX_RANGE-2)){
+      linear_x = 0.3;
+    }
+  }
+  if(phase == 7){
+    linear_x = 0.0;
+    angular_z = 0.0;
+
   }
 
 }
