@@ -19,9 +19,9 @@ int SIDE_DEG = 58; //(int)(RAD2DEG*atan(1.2/0.75)); = 57.99
 
 #define TRIANGLE 0.34
 
-#define PRESENT_PAST_RATIO 0.6
+#define PRESENT_PAST_RATIO 0.7
 
-#define MAX_LINEAR_VEL 2.0
+#define MAX_LINEAR_VEL 1.0 //2.0
 
 #define Robot_Width 0.55
 
@@ -100,19 +100,17 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
         phase++;
       }
     }
-    linear_x =  Kp*0.02*((1.2*1.2) - left_square); //+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
+    linear_x =  Kp*0.015*((1.25*1.25) - left_square); //+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
     angular_z = PRESENT_PAST_RATIO * triangle_error * Kp + pre_angular_z * (1 - PRESENT_PAST_RATIO);
   }
   if(phase == 1){
 
-    if(left_triangle < TRIANGLE){
-      phase ++;
-    }
+
 
     float r_vel,l_vel;
-    l_vel = 0.4;
+    l_vel = 0.2;//0.4;
     r_vel = l_vel * ((((1.5 - Robot_Width)*0.5)+Robot_Width)/((1.5-Robot_Width)*0.5));
-    float ease_curve = 0.07;
+    float ease_curve = -0.1; //0.07;
 
     //ROS_INFO("r_vel = %f",r_vel);
     float ang_vel = (r_vel-l_vel)/Robot_Width - ease_curve;
@@ -120,6 +118,10 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
 
     linear_x = lin_vel;
     angular_z = ang_vel;
+
+    if(left_triangle < TRIANGLE*0.5){
+      phase ++;
+    }
   }
   if(phase == 2){
     ROS_INFO("phase 2");
@@ -132,8 +134,8 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     }
 
     float triangle_error_rl = left_triangle-right_triangle;
-    linear_x = phase2_Kp * sum_all_scan;
-    angular_z = phase2_Kp_angular * triangle_error_rl;
+    linear_x = 0.4*phase2_Kp * sum_all_scan;
+    angular_z = 0.1*phase2_Kp_angular * triangle_error_rl;
 
     sum_all_scan = 0.0;
 
@@ -164,8 +166,8 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     //ROS_INFO("sum_all_scan : %f",sum_all_scan);
 
     float triangle_error_rl = left_triangle-right_triangle;
-    linear_x = -0.5;
-    angular_z = -1 * phase2_Kp_angular * triangle_error_rl;
+    linear_x = -0.4;
+    angular_z = -1 * 0.5*phase2_Kp_angular * triangle_error_rl;
 
     sum_all_scan = 0.0;
 
@@ -184,9 +186,9 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     ROS_INFO("phase 5");
 
     float r_vel,l_vel;
-    l_vel = -0.4;
+    l_vel = -0.2; //-0.4;
     r_vel = l_vel * ((((1.5 - Robot_Width)*0.5)+Robot_Width)/((1.5-Robot_Width)*0.5));
-    float ease_curve = 0.08;
+    float ease_curve = 0.0;//0.08;
 
     //ROS_INFO("r_vel = %f",r_vel);
     float ang_vel = (r_vel-l_vel)/Robot_Width - ease_curve;
@@ -221,27 +223,30 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
         ROS_WARN("isinf");
         if(phase5_count >= 5){
           phase++;
+          pre_angular_z = 0.0;
         }
     }
   }
   if(phase == 6){
     ROS_INFO("phase6");
-    float right_error = 0.6 - laserscan_arr[179];
-    linear_x =  1.0;//+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
-    angular_z = PRESENT_PAST_RATIO * right_error * Kp + pre_angular_z * (1 - PRESENT_PAST_RATIO);
+    float right_error = 0.6*1.414- laserscan_arr[135];
+    linear_x =  0.4;//+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
+    angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
     int i=0;
-    for(i=0;i<180;i++){
-      printf("%f",laserscan_arr[i]);
-    }
-    ROS_INFO("============================");
+
     if(laserscan_arr[170]>(MAX_RANGE-2)){
       phase++;
     }
-    if(laserscan_arr[150]>(MAX_RANGE-2)){
-      linear_x = 0.5;
+    if(laserscan_arr[120]>(MAX_RANGE-2)){
+      linear_x = 0.2;
+      right_error = 0.6 - laserscan_arr[179];
+      angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
+
     }
     if(laserscan_arr[160]>(MAX_RANGE-2)){
-      linear_x = 0.3;
+      linear_x = 0.1;
+      right_error = 0.6 - laserscan_arr[179];
+      angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
     }
   }
   if(phase == 7){
