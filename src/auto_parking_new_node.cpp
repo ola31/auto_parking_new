@@ -21,7 +21,8 @@ int SIDE_DEG = 58; //(int)(RAD2DEG*atan(1.2/0.75)); = 57.99
 
 #define PRESENT_PAST_RATIO 0.7
 
-#define MAX_LINEAR_VEL 1.0 //2.0
+#define MAX_LINEAR_VEL 0.3 //2.0
+#define MAX_ANGULAR_Z 3.0
 
 #define Robot_Width 0.55
 
@@ -100,17 +101,19 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
         phase++;
       }
     }
-    linear_x =  Kp*0.015*((1.25*1.25) - left_square); //+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
-    angular_z = PRESENT_PAST_RATIO * triangle_error * Kp + pre_angular_z * (1 - PRESENT_PAST_RATIO);
+    linear_x = MAX_LINEAR_VEL*(((1.25*1.25) - left_square)/(1.25*1.25)); //Kp*0.015*((1.25*1.25) - left_square); //+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
+    angular_z = MAX_ANGULAR_Z*(triangle_error/TRIANGLE);//PRESENT_PAST_RATIO * triangle_error * Kp + pre_angular_z * (1 - PRESENT_PAST_RATIO);
+    angular_z = PRESENT_PAST_RATIO*angular_z + (1-PRESENT_PAST_RATIO)*pre_angular_z;
+    pre_angular_z = angular_z;
   }
   if(phase == 1){
 
 
 
     float r_vel,l_vel;
-    l_vel = 0.2;//0.4;
+    l_vel = 0.2;//0.4;                                                                  //tuning 1-1
     r_vel = l_vel * ((((1.5 - Robot_Width)*0.5)+Robot_Width)/((1.5-Robot_Width)*0.5));
-    float ease_curve = -0.1; //0.07;
+    float ease_curve = -0.1; //0.07;                                                    //tuning 1-2
 
     //ROS_INFO("r_vel = %f",r_vel);
     float ang_vel = (r_vel-l_vel)/Robot_Width - ease_curve;
@@ -119,7 +122,7 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     linear_x = lin_vel;
     angular_z = ang_vel;
 
-    if(left_triangle < TRIANGLE*0.5){
+    if(left_triangle < TRIANGLE*0.5){                                                   //tuning 1-3
       phase ++;
     }
   }
@@ -134,8 +137,8 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     }
 
     float triangle_error_rl = left_triangle-right_triangle;
-    linear_x = 0.4*phase2_Kp * sum_all_scan;
-    angular_z = 0.1*phase2_Kp_angular * triangle_error_rl;
+    linear_x = 0.4*phase2_Kp * sum_all_scan;                                            //tuning 2-1
+    angular_z = 0.1*phase2_Kp_angular * triangle_error_rl;                              //tuning 2-2
 
     sum_all_scan = 0.0;
 
@@ -152,6 +155,7 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
   if(phase == 4){
     //ROS_INFO("wait_theashold : %d",wait_threshold);
     ROS_INFO("phase 4");
+    pre_angular_z = 0.0;
 /*
     if(left_triangle > PARKING_AREA_TRIAGNLE){
       phase ++;
@@ -166,15 +170,16 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     //ROS_INFO("sum_all_scan : %f",sum_all_scan);
 
     float triangle_error_rl = left_triangle-right_triangle;
-    linear_x = -0.4;
-    angular_z = -1 * 0.5*phase2_Kp_angular * triangle_error_rl;
+    linear_x = -0.4;                                                                    //tuning 3-1
+    angular_z = -1 * 0.5*phase2_Kp_angular * triangle_error_rl;                         //tuning 3-2
+    angular_z = PRESENT_PAST_RATIO*angular_z + (1-PRESENT_PAST_RATIO)*pre_angular_z;
 
     sum_all_scan = 0.0;
 
     /*if(left_triangle > PARKING_AREA_TRIAGNLE){
       phase ++;
     }*/
-    if(laserscan_arr[90]>0.7){
+    if(laserscan_arr[90]>0.7){                                                          //tuning 4-1
       phase4_count++;
       if(phase4_count>5){
         phase++;
@@ -186,9 +191,9 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
     ROS_INFO("phase 5");
 
     float r_vel,l_vel;
-    l_vel = -0.2; //-0.4;
+    l_vel = -0.2; //-0.4;                                                                //tuning 5-1
     r_vel = l_vel * ((((1.5 - Robot_Width)*0.5)+Robot_Width)/((1.5-Robot_Width)*0.5));
-    float ease_curve = 0.0;//0.08;
+    float ease_curve = 0.0;//0.08;                                                       //tuning 5-2
 
     //ROS_INFO("r_vel = %f",r_vel);
     float ang_vel = (r_vel-l_vel)/Robot_Width - ease_curve;
@@ -229,24 +234,31 @@ void scan_Callback(const sensor_msgs::LaserScan::ConstPtr& msg){
   }
   if(phase == 6){
     ROS_INFO("phase6");
-    float right_error = 0.6*1.414- laserscan_arr[135];
-    linear_x =  0.4;//+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
-    angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
-    int i=0;
+    float right_error = 0.6*1.414- laserscan_arr[135];                                                                        //tuning 5-0
 
     if(laserscan_arr[170]>(MAX_RANGE-2)){
       phase++;
     }
-    if(laserscan_arr[120]>(MAX_RANGE-2)){
+    else if(laserscan_arr[120]>(MAX_RANGE-2)){
       linear_x = 0.2;
       right_error = 0.6 - laserscan_arr[179];
       angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
+      pre_angular_z = angular_z;
 
     }
-    if(laserscan_arr[160]>(MAX_RANGE-2)){
+    else if(laserscan_arr[160]>(MAX_RANGE-2)){
       linear_x = 0.1;
       right_error = 0.6 - laserscan_arr[179];
       angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
+      pre_angular_z = angular_z;
+    }
+    else{
+      float right_error = 0.6*1.414- laserscan_arr[135];                                                                        //tuning 5-0
+      linear_x =  0.4;//+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;    //tuning 5-1
+      //angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);                         //tuning 5-2
+      angular_z = MAX_LINEAR_VEL*(right_error/0.6*1.414);
+      angular_z = PRESENT_PAST_RATIO * angular_z + (1-PRESENT_PAST_RATIO)*pre_angular_z;
+      pre_angular_z = angular_z;
     }
   }
   if(phase == 7){
