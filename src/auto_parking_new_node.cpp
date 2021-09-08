@@ -21,11 +21,11 @@ int operating_mode=5;           //start mode = cmd_vel mode
 //#define SIDE_DEG 45
 int SIDE_DEG = 58; //(int)(RAD2DEG*atan(1.2/0.75)); = 57.99
 
-#define TRIANGLE 0.45//0.31 //0.34
+#define TRIANGLE 0.31//0.45//0.31 //0.34
 
 #define PRESENT_PAST_RATIO 0.7
 
-#define MAX_LINEAR_VEL 0.7 //2.0
+#define MAX_LINEAR_VEL 0.4 //2.0
 #define MAX_ANGULAR_Z 2.0
 
 #define Robot_Width 0.55
@@ -174,7 +174,7 @@ yd_laserscan_arr[0]=msg->ranges[1];
     float r_vel,l_vel;
     l_vel = 0.2;//0.4;                                                                  //tuning 1-1
     r_vel = l_vel * ((((1.5 - Robot_Width)*0.5)+Robot_Width)/((1.5-Robot_Width)*0.5));
-    float ease_curve = -0.1; //0.07;                                                    //tuning 1-2
+    float ease_curve = 0.0;//-0.1; //0.07;                                                    //tuning 1-2
 
     //ROS_INFO("r_vel = %f",r_vel);
     float ang_vel = (r_vel-l_vel)/Robot_Width - ease_curve;
@@ -183,7 +183,7 @@ yd_laserscan_arr[0]=msg->ranges[1];
     linear_x = lin_vel;
     angular_z = ang_vel;
 
-    if(left_triangle < TRIANGLE*0.5){                                                   //tuning 1-3
+    if(left_triangle < TRIANGLE*0.8){                                                   //tuning 1-3
       phase ++;
     }
   }
@@ -235,12 +235,16 @@ yd_laserscan_arr[0]=msg->ranges[1];
     angular_z = -1 * 0.5*phase2_Kp_angular * triangle_error_rl;                         //tuning 3-2
     angular_z = PRESENT_PAST_RATIO*angular_z + (1-PRESENT_PAST_RATIO)*pre_angular_z;
 
-    sum_all_scan = 0.0;
+    //sum_all_scan = 0.0;
 
     /*if(left_triangle > PARKING_AREA_TRIAGNLE){
       phase ++;
     }*/
-    if(laserscan_arr[90]>0.7){                                                          //tuning 4-1
+    if(laserscan_arr[88]>0.9 ||
+       laserscan_arr[89]>0.9 ||
+       laserscan_arr[90]>0.9 ||
+       laserscan_arr[91]>0.9 ||
+       laserscan_arr[92]>0.9 ){    //0.7                                                      //tuning 4-1
       phase4_count++;
       if(phase4_count>5){
         phase++;
