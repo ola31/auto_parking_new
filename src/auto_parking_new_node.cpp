@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "std_msgs/Int8.h"
+#include "std_msgs/UInt16.h"
 
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Twist.h"
@@ -28,7 +29,7 @@ int SIDE_DEG = 58; //(int)(RAD2DEG*atan(1.2/0.75)); = 57.99
 #define MAX_LINEAR_VEL 0.4 //2.0
 #define MAX_ANGULAR_Z 2.0
 
-#define Robot_Width 0.55
+#define Robot_Width 0.48//0.55
 
 #define LOOP_RATE 30
 
@@ -172,8 +173,9 @@ yd_laserscan_arr[0]=msg->ranges[1];
 
 
     float r_vel,l_vel;
-    l_vel = 0.2;//0.4;                                                                  //tuning 1-1
+    l_vel = 0.1;//0.2;//0.4;                                                                  //tuning 1-1
     r_vel = l_vel * ((((1.5 - Robot_Width)*0.5)+Robot_Width)/((1.5-Robot_Width)*0.5));
+    //r_vel = l_vel*2.1579;
     float ease_curve = 0.0;//-0.1; //0.07;                                                    //tuning 1-2
 
     //ROS_INFO("r_vel = %f",r_vel);
@@ -232,7 +234,7 @@ yd_laserscan_arr[0]=msg->ranges[1];
 
     float triangle_error_rl = left_triangle-right_triangle;
     linear_x = -0.4;                                                                    //tuning 3-1
-    angular_z = -1 * 0.5*phase2_Kp_angular * triangle_error_rl;                         //tuning 3-2
+    angular_z = -1 * 0.2*phase2_Kp_angular * triangle_error_rl;                         //tuning 3-2
     angular_z = PRESENT_PAST_RATIO*angular_z + (1-PRESENT_PAST_RATIO)*pre_angular_z;
 
     //sum_all_scan = 0.0;
@@ -240,11 +242,12 @@ yd_laserscan_arr[0]=msg->ranges[1];
     /*if(left_triangle > PARKING_AREA_TRIAGNLE){
       phase ++;
     }*/
-    if(laserscan_arr[88]>0.9 ||
-       laserscan_arr[89]>0.9 ||
-       laserscan_arr[90]>0.9 ||
-       laserscan_arr[91]>0.9 ||
-       laserscan_arr[92]>0.9 ){    //0.7                                                      //tuning 4-1
+
+    if(laserscan_arr[88]>0.8 ||
+       laserscan_arr[89]>0.8 ||
+       laserscan_arr[90]>0.8 ||
+       laserscan_arr[91]>0.8 ||
+       laserscan_arr[92]>0.8 ){    //0.7                                                      //tuning 4-1
       phase4_count++;
       if(phase4_count>5){
         phase++;
@@ -340,14 +343,22 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
 
   ros::Publisher cmdvel_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+  ros::Publisher status_pub = nh.advertise<std_msgs::UInt16>("/parking_state", 1000);
+
   ros::Subscriber scan_sub = nh.subscribe("/scan", 1000, scan_Callback);
   ros::Subscriber mode_sub = nh.subscribe("/mode", 1000, modeCallback);
+
+
 
   ros::Rate loop_rate(LOOP_RATE);
   while (ros::ok())
   {
     //ROS_INFO("%d",SIDE_DEG);
     geometry_msgs::Twist msg;
+    std_msgs::UInt16 status_msg;
+    status_msg.data = 1;
+    status_pub.publish(status_msg);
+
     msg.linear.x = linear_x;
     msg.angular.z = angular_z;
 
