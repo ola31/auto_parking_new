@@ -160,6 +160,7 @@ yd_laserscan_arr[0]=msg->ranges[1];
       phase2_count ++;
       if(phase2_count >=5){
         phase++;
+        is_posi_mode_b = true;
       }
     }
     linear_x = MAX_LINEAR_VEL*(((1.25*1.25) - left_square)/(1.25*1.25)); //Kp*0.015*((1.25*1.25) - left_square); //+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
@@ -176,6 +177,8 @@ yd_laserscan_arr[0]=msg->ranges[1];
     ROS_WARN("angle 0 : %f angle 90 : %f angle 180 : %f ",laserscan_arr[0],laserscan_arr[90],laserscan_arr[179]);
   }
   if(phase == 1){
+
+    is_posi_mode_b = true;
 
 /*
 
@@ -202,9 +205,11 @@ yd_laserscan_arr[0]=msg->ranges[1];
 
     if(left_triangle < TRIANGLE*0.8){                                                   //tuning 1-3
       phase ++;
+      is_posi_mode_b = false;
     }
   }
   if(phase == 2){
+    is_posi_mode_b = false;
     ROS_INFO("phase 2");
     for(i=0;i<180;i++){
       sum_all_scan += laserscan_arr[i];
@@ -222,6 +227,8 @@ yd_laserscan_arr[0]=msg->ranges[1];
 
   }
   if(phase == 3){
+
+
     ROS_INFO("phase3");
     linear_x = 0.0;
     angular_z = 0.0;
