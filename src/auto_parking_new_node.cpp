@@ -31,8 +31,8 @@ int SIDE_DEG = 58; //(int)(RAD2DEG*atan(1.2/0.75)); = 57.99
 
 #define PRESENT_PAST_RATIO 0.7
 
-#define MAX_LINEAR_VEL 0.4 //2.0
-#define MAX_ANGULAR_Z 2.0
+#define MAX_LINEAR_VEL 0.2//0.4 //2.0
+#define MAX_ANGULAR_Z 1.0  //2.0
 
 #define Robot_Width 0.48//0.55
 
@@ -130,7 +130,7 @@ yd_laserscan_arr[0]=msg->ranges[1];
   for(i=180-SIDE_DEG-1;i<180;i++){
     right_triangle += (laserscan_arr[i]*laserscan_arr[i]);
   }
-
+/*
   printf("[");
   for(i=0;i<180;i++){
     printf("%d : %f\n",i,laserscan_arr[i]);
@@ -138,6 +138,7 @@ yd_laserscan_arr[0]=msg->ranges[1];
   printf("]");
 
   ROS_INFO("1 deg : %f",laserscan_arr[1]);
+*/
   left_triangle *= (0.5*DEG2RAD);
   right_triangle *=(0.5*DEG2RAD);
 
@@ -200,6 +201,7 @@ yd_laserscan_arr[0]=msg->ranges[1];
     }
 
     */
+ROS_INFO("phase1");
     R = 0.25;
     Theta = 0.3;
 
