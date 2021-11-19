@@ -6,7 +6,11 @@
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Twist.h"
 
+#include "rt_thread/r_theta.h"
+
 #include <math.h>
+
+float R,Theta = 0.0;
 
 int operating_mode=5;           //start mode = cmd_vel mode
 
@@ -170,7 +174,7 @@ yd_laserscan_arr[0]=msg->ranges[1];
   }
   if(phase == 1){
 
-
+/*
 
     float r_vel,l_vel;
     l_vel = 0.1;//0.2;//0.4;                                                                  //tuning 1-1
@@ -184,6 +188,14 @@ yd_laserscan_arr[0]=msg->ranges[1];
 
     linear_x = lin_vel;
     angular_z = ang_vel;
+
+    if(left_triangle < TRIANGLE*0.8){                                                   //tuning 1-3
+      phase ++;
+    }
+
+    */
+    R = 0.25;
+    Theta = 0.3;
 
     if(left_triangle < TRIANGLE*0.8){                                                   //tuning 1-3
       phase ++;
@@ -348,6 +360,8 @@ int main(int argc, char **argv)
   ros::Subscriber scan_sub = nh.subscribe("/scan", 1000, scan_Callback);
   ros::Subscriber mode_sub = nh.subscribe("/mode", 1000, modeCallback);
 
+  ros::ServiceClient r_theta_client = nh.serviceClient<rt_thread::r_theta>("r_theta_go");
+
 
 
   ros::Rate loop_rate(LOOP_RATE);
@@ -365,6 +379,21 @@ int main(int argc, char **argv)
     if(operating_mode == 5){  // 5 = JoyNotUse
       cmdvel_pub.publish(msg);
       ROS_INFO("operating mode : %d",operating_mode);
+    }
+
+    rt_thread::r_theta srv;
+    srv.request.r = R;
+    srv.request.theta = Theta;
+    if(abs(R)>0.00001 || abs(Theta)>0.0001){
+      if (r_theta_client.call(srv)) {
+          //ROS_INFO("send srv: %d + %d", (long int)srv.request.a, (long int)srv.request.b);
+          ROS_INFO("receive srv: %d", (float)srv.response.result);
+          R=0.0;
+          Theta = 0.0;
+      }
+      else {
+          ROS_ERROR("Failed to call service ros_tutorial_srv");
+      }
     }
 
     ros::spinOnce();
