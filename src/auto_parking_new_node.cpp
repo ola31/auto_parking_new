@@ -74,6 +74,7 @@ float yd_laserscan_arr[720]={0};
 float pre_yd_laserscan_arr[720]={0};
 
 bool is_posi_mode_b = false;
+int service_result = 0;
 
 void modeCallback(const std_msgs::Int8::ConstPtr& msg);
 
@@ -406,14 +407,19 @@ int main(int argc, char **argv)
     srv.request.r = R;
     srv.request.theta = Theta;
     if(is_posi_mode_b == true && (abs(R)>0.000001 || abs(Theta)>0.00001)){
+      if(service_result == 1){
+        service_result = 0;
       if (r_theta_client.call(srv)) {
           //ROS_INFO("send srv: %d + %d", (long int)srv.request.a, (long int)srv.request.b);
           ROS_INFO("receive srv: %d", (float)srv.response.result);
+          service_result = src.responce.result;
+
           R=0.0;
           Theta = 0.0;
       }
       else {
           ROS_ERROR("Failed to call service ros_tutorial_srv");
+      }
       }
     }
 
