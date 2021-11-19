@@ -2,6 +2,7 @@
 #include "std_msgs/String.h"
 #include "std_msgs/Int8.h"
 #include "std_msgs/UInt16.h"
+#include "std_msgs/Bool.h"
 
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Twist.h"
@@ -71,6 +72,8 @@ int phase5_count=0;
 
 float yd_laserscan_arr[720]={0};
 float pre_yd_laserscan_arr[720]={0};
+
+bool is_posi_mode_b = false;
 
 void modeCallback(const std_msgs::Int8::ConstPtr& msg);
 
@@ -356,6 +359,7 @@ int main(int argc, char **argv)
 
   ros::Publisher cmdvel_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
   ros::Publisher status_pub = nh.advertise<std_msgs::UInt16>("/parking_state", 1000);
+  ros::Publisher is_posi_mode_pub = nh.advertise<std_msgs::Bool>("/is_posi_mode", 1000);
 
   ros::Subscriber scan_sub = nh.subscribe("/scan", 1000, scan_Callback);
   ros::Subscriber mode_sub = nh.subscribe("/mode", 1000, modeCallback);
@@ -373,8 +377,13 @@ int main(int argc, char **argv)
     status_msg.data = 1;
     status_pub.publish(status_msg);
 
+    std_msgs::Bool is_posi_mode_msg;
+    is_posi_mode_msg.data = is_posi_mode_b;
+
     msg.linear.x = linear_x;
     msg.angular.z = angular_z;
+
+    is_posi_mode_pub.publish(is_posi_mode_msg);
 
     if(operating_mode == 5){  // 5 = JoyNotUse
       cmdvel_pub.publish(msg);
