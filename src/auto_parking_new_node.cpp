@@ -160,8 +160,11 @@ yd_laserscan_arr[0]=msg->ranges[1];
     if((laserscan_arr[2]+laserscan_arr[3]+laserscan_arr[4])/3 > 1.2){
       phase2_count ++;
       if(phase2_count >=5){
-        phase++;
+        //phase++;
         is_posi_mode_b = true;
+        if(phase2_count >=6){
+          phase++;
+        }
       }
     }
     linear_x = MAX_LINEAR_VEL*(((1.25*1.25) - left_square)/(1.25*1.25)); //Kp*0.015*((1.25*1.25) - left_square); //+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;
@@ -402,7 +405,7 @@ int main(int argc, char **argv)
     rt_thread::r_theta srv;
     srv.request.r = R;
     srv.request.theta = Theta;
-    if(abs(R)>0.00001 || abs(Theta)>0.0001){
+    if(is_posi_mode_b == true && (abs(R)>0.000001 || abs(Theta)>0.00001)){
       if (r_theta_client.call(srv)) {
           //ROS_INFO("send srv: %d + %d", (long int)srv.request.a, (long int)srv.request.b);
           ROS_INFO("receive srv: %d", (float)srv.response.result);
