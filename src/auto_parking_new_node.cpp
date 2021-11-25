@@ -16,7 +16,7 @@ float R,Theta = 0.0;
 int operating_mode=5;           //start mode = cmd_vel mode
 
 
-#define MAX_RANGE 6
+#define MAX_RANGE 3
 
 #define LEFT_ANG 90
 #define RIGHT_ANG 270
@@ -27,9 +27,9 @@ int operating_mode=5;           //start mode = cmd_vel mode
 //#define SIDE_DEG 45
 int SIDE_DEG = 58; //(int)(RAD2DEG*atan(1.2/0.75)); = 57.99
 
-#define TRIANGLE 0.31//0.45//0.31 //0.34
+#define TRIANGLE 0.36// 0.31//0.45//0.31 //0.34
 
-#define PRESENT_PAST_RATIO 0.7
+#define PRESENT_PAST_RATIO 0.9
 
 #define MAX_LINEAR_VEL 0.2//0.4 //2.0
 #define MAX_ANGULAR_Z 1.0  //2.0
@@ -64,7 +64,7 @@ float sum_all_scan = 0;
 float stop_threshold = 70;
 
 int wait =0;
-int wait_threshold = (float)PARKING_AREA_TIME/((float)1.0/(float)LOOP_RATE);
+int wait_threshold = PARKING_AREA_TIME*LOOP_RATE;
 
 int phase2_count = 0;
 int phase4_count =0;
@@ -74,7 +74,7 @@ float yd_laserscan_arr[720]={0};
 float pre_yd_laserscan_arr[720]={0};
 
 bool is_posi_mode_b = false;
-int service_result = 0;
+int service_result = 1;
 
 void modeCallback(const std_msgs::Int8::ConstPtr& msg);
 
@@ -163,6 +163,8 @@ yd_laserscan_arr[0]=msg->ranges[1];
       if(phase2_count >=5){
         //phase++;
         is_posi_mode_b = true;
+        linear_x = 0.0;
+        angular_z = 0.0;
         if(phase2_count >=6){
           phase++;
         }
@@ -206,12 +208,14 @@ yd_laserscan_arr[0]=msg->ranges[1];
 
     */
 ROS_INFO("phase1");
-    R = 0.25;
-    Theta = 0.3;
+    R = 0.20;
+    Theta = 0.16;
 
-    if(left_triangle < TRIANGLE*0.8){                                                   //tuning 1-3
+    if(left_triangle < TRIANGLE){                                                   //tuning 1-3
       phase ++;
       is_posi_mode_b = false;
+      R = 0.0;
+     Theta = 0.0;
     }
   }
   if(phase == 2){
@@ -226,8 +230,8 @@ ROS_INFO("phase1");
     }
 
     float triangle_error_rl = left_triangle-right_triangle;
-    linear_x = 0.4*phase2_Kp * sum_all_scan;                                            //tuning 2-1
-    angular_z = 0.1*phase2_Kp_angular * triangle_error_rl;                              //tuning 2-2
+    linear_x = 0.15*phase2_Kp * sum_all_scan;                                            //tuning 2-1
+    angular_z = 0.15*phase2_Kp_angular * triangle_error_rl;                              //tuning 2-2
 
     sum_all_scan = 0.0;
 
@@ -261,8 +265,8 @@ ROS_INFO("phase1");
     //ROS_INFO("sum_all_scan : %f",sum_all_scan);
 
     float triangle_error_rl = left_triangle-right_triangle;
-    linear_x = -0.4;                                                                    //tuning 3-1
-    angular_z = -1 * 0.2*phase2_Kp_angular * triangle_error_rl;                         //tuning 3-2
+    linear_x = -0.1;                                                                    //tuning 3-1
+    angular_z = -1 * 0.05*phase2_Kp_angular * triangle_error_rl;                         //tuning 3-2
     angular_z = PRESENT_PAST_RATIO*angular_z + (1-PRESENT_PAST_RATIO)*pre_angular_z;
 
     //sum_all_scan = 0.0;
@@ -271,21 +275,26 @@ ROS_INFO("phase1");
       phase ++;
     }*/
 
-    if(laserscan_arr[88]>0.8 ||
-       laserscan_arr[89]>0.8 ||
-       laserscan_arr[90]>0.8 ||
-       laserscan_arr[91]>0.8 ||
-       laserscan_arr[92]>0.8 ){    //0.7                                                      //tuning 4-1
+    if(laserscan_arr[88]>0.65 ||
+       laserscan_arr[89]>0.65 ||
+       laserscan_arr[90]>0.65 ||
+       laserscan_arr[91]>0.65 ||
+       laserscan_arr[92]>0.65 ){    //0.7                                                      //tuning 4-1
       phase4_count++;
-      if(phase4_count>5){
-        phase++;
+      if(phase4_count>=5){
+        linear_x = 0.0;
+        angular_z = 0.0;
+        is_posi_mode_b = true;
+        if(phase4_count>=6){
+          phase++;
+        }
       }
     }
   }
   if(phase == 5){
 
     ROS_INFO("phase 5");
-
+/*
     float r_vel,l_vel;
     l_vel = -0.2; //-0.4;                                                                //tuning 5-1
     r_vel = l_vel * ((((1.5 - Robot_Width)*0.5)+Robot_Width)/((1.5-Robot_Width)*0.5));
@@ -297,9 +306,15 @@ ROS_INFO("phase1");
 
     linear_x = lin_vel;
     angular_z = ang_vel;
-
+*/
     //ang_vel *=-1;
     //lin_vel *=-1;
+
+    is_posi_mode_b = true;
+
+    R = -0.20;
+    Theta = -0.20;
+
 
     if(laserscan_arr[81]>(MAX_RANGE) ||
        laserscan_arr[82]>(MAX_RANGE) ||
@@ -323,41 +338,74 @@ ROS_INFO("phase1");
         phase5_count++;
         ROS_WARN("isinf");
         if(phase5_count >= 5){
-          phase++;
+
           pre_angular_z = 0.0;
+          is_posi_mode_b = false;
+          R = 0.0;
+          Theta = 0.0;
+          if(phase5_count>=6){
+           phase++;
+          }
+         
         }
     }
   }
   if(phase == 6){
+    is_posi_mode_b = false;
     ROS_INFO("phase6");
-    float right_error = 0.6*1.414- laserscan_arr[135];                                                                        //tuning 5-0
+    float right_error = 0.5* 0.7*1.414- laserscan_arr[135];                                                                        //tuning 5-0
 
-    if(laserscan_arr[170]>(MAX_RANGE-2)){
-      phase++;
-    }
-    else if(laserscan_arr[120]>(MAX_RANGE-2)){
-      linear_x = 0.2;
-      right_error = 0.6 - laserscan_arr[179];
-      angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
-      pre_angular_z = angular_z;
-
-    }
-    else if(laserscan_arr[160]>(MAX_RANGE-2)){
+  //  if(laserscan_arr[170]>(MAX_RANGE-1)){
+   //   phase++;
+   // }
+   if(laserscan_arr[170]<0.85){
+     phase++;
+   }
+/*
+    else if(laserscan_arr[120]>(MAX_RANGE)){
+     ROS_INFO("6-2");
       linear_x = 0.1;
       right_error = 0.6 - laserscan_arr[179];
       angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
       pre_angular_z = angular_z;
+
     }
+    else if(laserscan_arr[160]>(MAX_RANGE)){
+     ROS_INFO("6-3");
+      linear_x = 0.05;
+      right_error = 0.7 - laserscan_arr[179];
+      angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);
+      pre_angular_z = angular_z;
+    }
+*/
     else{
-      float right_error = 0.6*1.414- laserscan_arr[135];                                                                        //tuning 5-0
-      linear_x =  0.4;//+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;    //tuning 5-1
+      ROS_INFO("6-1");
+
+     // float right_error = 0.7*1.414- laserscan_arr[170];//135                                                                       //tuning 5-0
+     float right_error = 0.7 - laserscan_arr[170];
+      linear_x =  0.2;//+ MAX_LINEAR_VEL*PRESENT_PAST_RATIO + pre_linear_x*(1 - PRESENT_PAST_RATIO) - left_square * Kp*0.01;    //tuning 5-1
       //angular_z = PRESENT_PAST_RATIO * right_error * Kp*0.5 + pre_angular_z * (1 - PRESENT_PAST_RATIO);                         //tuning 5-2
-      angular_z = MAX_LINEAR_VEL*(right_error/0.6*1.414);
+      angular_z =0.5* MAX_ANGULAR_Z*(right_error/0.7);
       angular_z = PRESENT_PAST_RATIO * angular_z + (1-PRESENT_PAST_RATIO)*pre_angular_z;
       pre_angular_z = angular_z;
     }
   }
   if(phase == 7){
+  
+  if(laserscan_arr[170]>1.0){
+    phase++;
+  }
+  else{
+   float right_error_2 = 0.7-laserscan_arr[170];
+   linear_x = 0.15;
+  angular_z=0.5*MAX_ANGULAR_Z*(right_error_2/0.7);
+
+  angular_z = PRESENT_PAST_RATIO * angular_z + (1-PRESENT_PAST_RATIO)*pre_angular_z;
+  pre_angular_z = angular_z;
+  }
+}  
+  if(phase == 8){
+   ROS_INFO("phase7");
     linear_x = 0.0;
     angular_z = 0.0;
 
@@ -400,19 +448,24 @@ int main(int argc, char **argv)
 
     if(operating_mode == 5){  // 5 = JoyNotUse
       cmdvel_pub.publish(msg);
-      ROS_INFO("operating mode : %d",operating_mode);
+     // ROS_INFO("operating mode : %d",operating_mode);
     }
 
     rt_thread::r_theta srv;
     srv.request.r = R;
     srv.request.theta = Theta;
-    if(is_posi_mode_b == true && (abs(R)>0.000001 || abs(Theta)>0.00001)){
+
+//   ROS_INFO("test");
+//   ROS_INFO("is_posi_mode: %d, R : %f, Theta : %f",is_posi_mode_b,R,Theta);
+    if(is_posi_mode_b == true && (fabs(R)>0.000001 || fabs(Theta)>0.00001)){
+     ROS_INFO("service_enter");
       if(service_result == 1){
         service_result = 0;
+       ROS_INFO("service may start");
       if (r_theta_client.call(srv)) {
           //ROS_INFO("send srv: %d + %d", (long int)srv.request.a, (long int)srv.request.b);
           ROS_INFO("receive srv: %d", (float)srv.response.result);
-          service_result = src.responce.result;
+          service_result = srv.response.result;
 
           R=0.0;
           Theta = 0.0;
