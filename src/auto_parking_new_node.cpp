@@ -422,8 +422,8 @@ int main(int argc, char **argv)
   ros::Publisher status_pub = nh.advertise<std_msgs::UInt16>("/parking_state", 1000);
   ros::Publisher is_posi_mode_pub = nh.advertise<std_msgs::Bool>("/is_posi_mode", 1000);
 
-  ros::Subscriber scan_sub = nh.subscribe("/scan", 1000, scan_Callback);
-  ros::Subscriber mode_sub = nh.subscribe("/mode", 1000, modeCallback);
+  ros::Subscriber scan_sub = nh.subscribe("/scan", 1, scan_Callback);
+  ros::Subscriber mode_sub = nh.subscribe("/mode", 10, modeCallback);
 
   ros::ServiceClient r_theta_client = nh.serviceClient<rt_thread::r_theta>("r_theta_go");
 
