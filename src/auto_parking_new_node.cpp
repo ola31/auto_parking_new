@@ -209,7 +209,7 @@ yd_laserscan_arr[0]=msg->ranges[1];
     */
 ROS_INFO("phase1");
     R = 0.20;
-    Theta = 0.16;
+    Theta = 0.17; //0.16
 
     if(left_triangle < TRIANGLE){                                                   //tuning 1-3
       phase ++;
