@@ -7,6 +7,8 @@
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Twist.h"
 
+#include <unistd.h>
+
 #include "rt_thread/r_theta.h"
 
 #include <math.h>
@@ -242,9 +244,13 @@ ROS_INFO("phase1");
     ROS_INFO("phase3");
     linear_x = 0.0;
     angular_z = 0.0;
+    /*
     if((wait++) > wait_threshold){
       phase ++;
     }
+    */
+    sleep(3);
+    phase++;
 
   }
   if(phase == 4){
