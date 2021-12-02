@@ -1,4 +1,4 @@
 <launch>
-    <node pkg="auto_parking_new" type="auto_parking_new_node" name="auto_parking_new_node"/>
+    <node pkg="auto_parking_new" type="auto_parking_new_node" name="auto_parking_new_node" output="screen"/>
     <include file="$(find ydlidar_ros)/launch/X4.launch"> </include>
 </launch>
