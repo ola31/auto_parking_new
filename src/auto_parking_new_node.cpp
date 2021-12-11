@@ -249,7 +249,7 @@ ROS_INFO("phase1");
       phase ++;
     }
     */
-    sleep(3);
+    sleep(4);            //sleep 3+1 sec
     phase++;
 
   }
