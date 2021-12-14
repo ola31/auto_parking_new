@@ -343,12 +343,14 @@ ROS_INFO("phase1");
        ){
         phase5_count++;
         ROS_WARN("isinf");
+        ROS_INFO("laser90 : %f",laserscan_arr[90]);
         if(phase5_count >= 5){
 
           pre_angular_z = 0.0;
           is_posi_mode_b = false;
           R = 0.0;
           Theta = 0.0;
+          ROS_INFO("r,theta = 0");
           if(phase5_count>=6){
            phase++;
           }
@@ -432,7 +434,7 @@ int main(int argc, char **argv)
   ros::Publisher status_pub = nh.advertise<std_msgs::UInt16>("/parking_state", 1000);
   ros::Publisher is_posi_mode_pub = nh.advertise<std_msgs::Bool>("/is_posi_mode", 1000);
 
-  ros::Subscriber scan_sub = nh.subscribe("/scan", 1, scan_Callback);
+  ros::Subscriber scan_sub = nh.subscribe("/scan", 20, scan_Callback);
   ros::Subscriber mode_sub = nh.subscribe("/mode", 10, modeCallback);
 
   ros::ServiceClient r_theta_client = nh.serviceClient<rt_thread::r_theta>("r_theta_go");
@@ -462,6 +464,7 @@ int main(int argc, char **argv)
     }
     else{
       ROS_WARN("Operating_Mode is not JoyNotUse(5)mode, Robot will not move");
+
     }
 
     rt_thread::r_theta srv;
